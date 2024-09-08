@@ -11,7 +11,6 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Database\Eloquent\Builder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Livewire\Component;
 
 class TableTransaction extends Component implements HasForms, HasTable
@@ -29,20 +28,37 @@ class TableTransaction extends Component implements HasForms, HasTable
         $this->sales_id = $sales_id;
     }
 
-    public static function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
-            ->query(Transaction::query())
+            ->query(    
+                self::getEloquentQuery()
+            )
             ->columns([
                 TextColumn::make('date'),
-                TextColumn::make('status'),
-                TextColumn::make('block_number'),
-                TextColumn::make('transaction_hash'),
+                TextColumn::make('status')
+                ->label('Status')
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'draft' => 'gray',
+                    'failed' => 'danger',
+                    'success' => 'success',
+                }),            
+                TextColumn::make('block_number')
+                ->label('No. Blok'),
+                TextColumn::make('transaction_hash')
+                ->label('Hash')
+                ->words(15),
             ]);
     }
-    
+
     public function render()
     {
         return view('livewire.table-transaction');
+    }
+
+    public function getEloquentQuery(): Builder
+    {
+        return Transaction::query()->where('sales_id', $this->sales_id);
     }
 }
