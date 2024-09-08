@@ -84,7 +84,7 @@ class SalesResource extends Resource
                 TextInput::make('price')
                     ->label("Harga")
                     ->type('number')
-                    ->prefix('Rp. ')
+                    ->prefix('$')
                     ->reactive()
                     ->afterStateUpdated(function(Get $get, Set $set, ?string $old, ?string $state) {
                         $set('total', self::calculateTotal($state, $get('qty')));
@@ -92,6 +92,7 @@ class SalesResource extends Resource
                     ->numeric(),
                 TextInput::make('qty')
                     ->numeric()
+                    ->postfix('Ton')
                     ->label("Jumlah"),
                 TextInput::make('total')
                     ->label("Total")

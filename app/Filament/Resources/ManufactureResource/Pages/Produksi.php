@@ -65,7 +65,7 @@ class Produksi extends Page implements HasForms
 
             $availableStock = Stock::where('warehouse_name', 'raw_materials')->sum('qty');
             $this->notes = sprintf("
-                Penggunaan Bahan Baku : %d untuk memproduksi %d pcs dan sisa bahan baku : %d \n
+                Penggunaan Bahan Baku : %d untuk memproduksi %d Ton dan sisa bahan baku : %d \n
                 Status: %s
             ",
                 $estimation,
@@ -109,9 +109,7 @@ class Produksi extends Page implements HasForms
                         Select::make('goods_id')
                             ->label("Produk")
                             ->options(
-                                // Goods::whereHas('stock', fn (Builder $query) => $query->where('warehouse_name', 'raw_materials'))
                                 Goods::all()->pluck('name', 'id')
-                                // fn (Get $get): Collection => Goods::whereHas('stock', fn (Builder $query) => $query->where('warehouse_name', $get('warehouse_name')))->get()->pluck('name', 'id')
                             )
                             ->searchable()
                             ->reactive()
@@ -122,6 +120,7 @@ class Produksi extends Page implements HasForms
                         TextInput::make('qty')
                             ->label("Qty Produksi")
                             ->numeric()
+                            ->postfix('Ton')
                             ->validationMessages([
                                 'numeric' => 'Qty harus berupa angka',
                             ])
@@ -148,6 +147,7 @@ class Produksi extends Page implements HasForms
                                     ->searchable(),
                                 TextInput::make('consumable_qty')
                                     ->label("Qty")
+                                    ->postfix('kg')
                                     ->numeric()
                             ])
                             ->columns(2)

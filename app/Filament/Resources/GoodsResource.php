@@ -52,6 +52,7 @@ class GoodsResource extends Resource
                 TextInput::make('qty')
                     ->label('Quantity')
                     ->numeric()
+                    ->postfix('kg')
                     ->minValue(0),
                 Select::make('description')
                     ->label('Deskripsi')
@@ -62,6 +63,7 @@ class GoodsResource extends Resource
                     ->schema([
                         TextInput::make('weight')
                             ->label('Berat (kg)')
+                            ->postfix('kg')
                             ->numeric(),
                         TextInput::make('humidity')
                             ->label('Kelembapan (%)')

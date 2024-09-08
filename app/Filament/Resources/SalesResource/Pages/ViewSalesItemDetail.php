@@ -50,6 +50,7 @@ class ViewSalesItemDetail extends Page
             $this->manufacture = null;
         }
 
+
         $this->rd_id = $rd->id;
 
         $this->onboarding();
