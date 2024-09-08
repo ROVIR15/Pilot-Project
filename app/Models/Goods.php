@@ -9,7 +9,14 @@ class Goods extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'ptype', 'qty', 'description', 'qr_url', 'user_id'];
+    protected $fillable = [
+        'name',
+        'ptype',
+        'qty',
+        'description',
+        'qr_url',
+        'user_id'
+    ];
 
     public function stock()
     {
