@@ -42,9 +42,11 @@
                         <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ $this->record->coo }}</dd>
                     </div>
                     <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                        <dt class="text-sm font-medium leading-6 text-gray-900">Note</dt>
+                        <dt class="text-sm font-medium leading-6 text-gray-900">Nomor Produksi</dt>
                         <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-                            {{ $this->record->note }}
+                            @if($this->manufacture !== null) 
+                                {{ $this->manufacture['identifier'] }}
+                            @endif
                         </dd>
                     </div>
                 </div>
@@ -54,5 +56,9 @@
 
     @if($this->transaction)
         @livewire('table-transaction', ['sales_id' => $this->record->id])
+    @endif
+
+    @if($this->rd_id)
+        @livewire('table-item-consumption', ['rd_id' => $this->rd_id])
     @endif
 </x-filament-panels::page>
