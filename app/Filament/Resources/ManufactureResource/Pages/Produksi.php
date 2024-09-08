@@ -6,18 +6,26 @@ use App\Constants;
 use App\Filament\Resources\ManufactureResource;
 use App\Models\Goods;
 use App\Models\GoodsLog;
+use App\Models\ItemConsumption;
 use App\Models\ManufactureSetting;
+use App\Models\RecordProduction;
 use App\Models\Stock;
 use Carbon\Carbon;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Fieldset;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ViewField;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
+use Illuminate\Contracts\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Str;
 
 class Produksi extends Page implements HasForms
 {
@@ -38,6 +46,8 @@ class Produksi extends Page implements HasForms
     public $goods_id;
     public $qty;
 
+    public $raw_material_items = [];
+
     public bool $status;
 
     public function mount(): void
@@ -45,6 +55,7 @@ class Produksi extends Page implements HasForms
         $this->status = false;
         $this->goods_id = null;
         $this->qty = 0;
+        $this->raw_material_items = [];
     }
 
     public function updateNotes(): void
@@ -98,6 +109,7 @@ class Produksi extends Page implements HasForms
                         Select::make('goods_id')
                             ->label("Produk")
                             ->options(
+                                // Goods::whereHas('stock', fn (Builder $query) => $query->where('warehouse_name', 'raw_materials'))
                                 Goods::all()->pluck('name', 'id')
                                 // fn (Get $get): Collection => Goods::whereHas('stock', fn (Builder $query) => $query->where('warehouse_name', $get('warehouse_name')))->get()->pluck('name', 'id')
                             )
@@ -119,7 +131,29 @@ class Produksi extends Page implements HasForms
                                 $this->qty = $state;
                                 $this->updateNotes();
                             }),
-                    ]),
+                        Repeater::make('raw_material_items')
+                            ->label("Bahan Baku yg digunakan")
+                            ->schema([
+                                Select::make('stock_id')
+                                    ->label("Bahan Baku")
+                                    ->options(
+                                        Stock::selectRaw('min(id) as id, goods_id, sum(qty) as qty')
+                                            ->where('warehouse_name', 'raw_materials')
+                                            ->where('qty', '>', 0)
+                                            ->with('goods')
+                                            ->groupBy('goods_id')
+                                            ->get()
+                                            ->pluck('goods.name', 'id')
+                                    )
+                                    ->searchable(),
+                                TextInput::make('consumable_qty')
+                                    ->label("Qty")
+                                    ->numeric()
+                            ])
+                            ->columns(2)
+                            ->statePath('raw_material_items')
+
+                    ])
             ]);
     }
 
@@ -139,58 +173,85 @@ class Produksi extends Page implements HasForms
     {
         $filled = $this->form->getState();
 
-        $newStock = Stock::create([
-            'goods_id' => $filled['goods_id'],
-            'qty' => $filled['qty'],
-            'warehouse_name' => Constants::getKeyByValue(Constants::GOODS_CATEGORY['finished_goods']),
-            'grade' => "A",
-            'date' => Carbon::now()->format('Y-m-d'),
-        ]);
+        DB::beginTransaction();
+        try {
+            // Record Production
+            $rProd = RecordProduction::create([
+                'goods_id' => $filled['goods_id'],
+                'date' => Carbon::now()->format('Y-m-d'),
+                'identifier' => $this->getIdentifier(),
+                'qty' => $filled['qty'],
+            ]);
 
-        $newStock->save();
+            $rProd->save();
 
-        $this->reduceRawMaterial($filled['qty']);
+            $newStock = Stock::create([
+                'goods_id' => $filled['goods_id'],
+                'qty' => $filled['qty'],
+                'warehouse_name' => Constants::getKeyByValue(Constants::GOODS_CATEGORY['finished_goods']),
+                'grade' => "A",
+                'date' => Carbon::now()->format('Y-m-d'),
+            ]);
 
-        Notification::make()
+            $newStock->save();
+
+            if ($filled['raw_material_items'] && count($filled['raw_material_items']) > 0) {
+                foreach ($filled['raw_material_items'] as $rawMaterial) {
+                    $stock = Stock::where('id', $rawMaterial['stock_id'])->first();
+                    // update 
+                    Stock::where('id', $rawMaterial['stock_id'])->update([
+                        'qty' => $stock->qty - $rawMaterial['consumable_qty'],
+                    ]);
+
+                    // log item consumption
+                    ItemConsumption::create([
+                        'record_production_id' => $rProd->id,
+                        'identifier' => $rProd->identifier,
+                        'stock_id' => $rawMaterial['stock_id'],
+                        'goods_id' => $filled['goods_id'],
+                        'consumed_qty' => $rawMaterial['consumable_qty'],
+                        'farmer_name' => $stock->farmer_name,
+                    ]);
+
+                    $stock->save();
+
+                    // log goods move out
+                    $this->log(
+                        Carbon::now()->format('Y-m-d'),
+                        $rawMaterial['stock_id'],
+                        $filled['goods_id'],
+                        $stock->farmer_name,
+                        $rawMaterial['consumable_qty'],
+                        "out",
+                    );
+                }
+            }
+
+            // log goods move in
+            $this->log(
+                Carbon::now()->format('Y-m-d'),
+                $newStock->id,
+                $filled['goods_id'],
+                "Produksi",
+                $filled['qty'],
+                "in",
+            );
+
+            Notification::make()
             ->title('Produksi Berhasil')
             ->success()
             ->send();
-    }
 
-    // reduce raw material
-    public function reduceRawMaterial(int $reduction): void
-    {
-        $initial = $reduction;
-        while ($initial > 0) {
-            $stock = Stock::where('warehouse_name', 'raw_materials')->where('qty', '>', 0)->orderBy('id', 'asc')->first();
-            if ($stock->qty < $initial) {
-                $initial -= $stock->qty;
-                $stock->decrement('qty', $stock->qty);
-                // log movement
-                $this->log(
-                    Carbon::now()->format('Y-m-d'),
-                    $stock->id,
-                    $stock->goods_id,
-                    $stock->farmer_name,
-                    $stock->qty,
-                    "out",
-                );
-            } elseif ($stock->qty >= $initial) {
-                $stock->decrement('qty', $initial);
-                // log
-                $this->log(
-                    Carbon::now()->format('Y-m-d'),
-                    $stock->id,
-                    $stock->goods_id,
-                    $stock->farmer_name,
-                    $initial,
-                    "out",
-                );
-                $initial = 0;
-            } else {
-                $initial = 0;
-            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Notification::make()
+                ->title('Produksi Gagal')
+                ->danger()
+                ->body($e->getMessage())
+                ->send();
         }
+
     }
 
     public function log(
@@ -213,5 +274,10 @@ class Produksi extends Page implements HasForms
         ]);
 
         $created->save();
+    }
+
+    public function getIdentifier(): string
+    {
+        return substr(str_shuffle(MD5(microtime())), 0, 10);
     }
 }

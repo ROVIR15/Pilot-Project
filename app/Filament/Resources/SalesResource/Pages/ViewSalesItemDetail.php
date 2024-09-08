@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SalesResource\Pages;
 
 use App\Filament\Resources\SalesResource;
+use App\Models\RecordProduction;
 use App\Models\Sales;
 use App\Models\Transaction;
 use Filament\Notifications\Notification;
@@ -20,6 +21,10 @@ class ViewSalesItemDetail extends Page
 
     public $transaction;
 
+    public $manufacture;
+
+    public $rd_id;
+
     // mount
     public function mount(string $sales_identifier): void
     {
@@ -29,13 +34,25 @@ class ViewSalesItemDetail extends Page
         } else {
             $this->record = null;
         }
-        
+
         $sales = Transaction::where('sales_id', $this->record->id)->get();
         if ($sales) {
             $this->transaction = $sales;
         } else {
             $this->transaction = null;
         }
+
+        $rd = RecordProduction::where('goods_id', $this->record->goods_id)
+            ->first();
+        if ($rd) {
+            $this->manufacture = $rd;
+        } else {
+            $this->manufacture = null;
+        }
+
+        $this->rd_id = $rd->id;
+
+        $this->onboarding();
     }
 
     // onboarding
