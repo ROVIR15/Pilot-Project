@@ -62,6 +62,7 @@ class ManufactureResource extends Resource
                     })
                     ->required(true),
                 TextInput::make('consumption')
+                    ->postfix('kg')
                     ->label("Jumlah Bahan Baku yg digunakan")
             ]);
     }

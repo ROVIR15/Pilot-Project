@@ -83,6 +83,8 @@ class SalesResource extends Resource
                     }),
                 TextInput::make('price')
                     ->label("Harga")
+                    ->type('number')
+                    ->prefix('Rp. ')
                     ->reactive()
                     ->afterStateUpdated(function(Get $get, Set $set, ?string $old, ?string $state) {
                         $set('total', self::calculateTotal($state, $get('qty')));
@@ -145,7 +147,8 @@ class SalesResource extends Resource
                 TextColumn::make('buyer_name')
                     ->label("Pembeli"),
                 TextColumn::make('price')
-                    ->label("Harga"),
+                    ->label("Harga")
+                    ->prefix("Rp. "),
                 TextColumn::make('qty')
                     ->label("Jumlah"),
                 TextColumn::make('total')
