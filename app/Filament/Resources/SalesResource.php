@@ -30,6 +30,10 @@ class SalesResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $title = 'Marketing';
+
+    protected static ?string $navigationLabel = 'Marketing';
+
     public $goods_id;
     public $price;
     public static $qty;
@@ -92,7 +96,8 @@ class SalesResource extends Resource
                     ->numeric(),
                 TextInput::make('qty')
                     ->numeric()
-                    ->label("Jumlah"),
+                    ->label("Jumlah")
+                    ->postfix("pcs"),
                 TextInput::make('total')
                     ->label("Total")
                     ->disabled(true),

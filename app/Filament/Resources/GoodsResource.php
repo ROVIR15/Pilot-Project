@@ -23,10 +23,9 @@ class GoodsResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static ?string $navigationLabel = 'Purchasing';
+    protected static ?string $navigationLabel = 'Receiving';
 
-    protected static ?string $title = 'Purchasing';
-    protected ?string $subheading = 'Custom Page Subheading';
+    protected static ?string $title = 'Receiving';
 
     public static function form(Form $form): Form
     {
@@ -52,6 +51,7 @@ class GoodsResource extends Resource
                 TextInput::make('qty')
                     ->label('Quantity')
                     ->numeric()
+                    ->postfix('kg')
                     ->minValue(0),
                 Select::make('description')
                     ->label('Deskripsi')

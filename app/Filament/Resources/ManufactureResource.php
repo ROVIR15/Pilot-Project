@@ -28,6 +28,10 @@ class ManufactureResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $title = 'Manufacture';
+
+    protected static ?string $navigationLabel = 'Manufacture';
+
     public static function form(Form $form): Form
     {
         return $form

@@ -39,8 +39,6 @@ class Produksi extends Page implements HasForms
 
     protected ?string $heading = 'Mulai Produksi';
 
-    protected ?string $subheading = 'Custom Page Subheading';
-
     // public variable 
     public $notes = "Hasil Produksi";
     public $goods_id;
@@ -125,6 +123,7 @@ class Produksi extends Page implements HasForms
                             ->validationMessages([
                                 'numeric' => 'Qty harus berupa angka',
                             ])
+                            ->postfix('pcs')
                             ->required(true)
                             ->reactive()
                             ->afterStateUpdated(function ($state) {
